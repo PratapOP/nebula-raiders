@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Nebula Raiders</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+
+<div id="ui">
+    <div id="topbar">
+        <div id="stats">
+            <span id="hp">HP: 100</span>
+            <span id="scrap">Scrap: 0</span>
+            <span id="level">Wave: 1</span>
+        </div>
+
+        <div id="controls">
+            <button id="pauseBtn">Pause</button>
+            <button id="shopBtn">Shop</button>
+            <button id="resetBtn">Reset Save</button>
+        </div>
+    </div>
+
+    <canvas id="gameCanvas" width="900" height="600"></canvas>
+</div>
+
+<div id="overlay" class="hidden">
+    <div id="overlayContent"></div>
+</div>
+
+<script src="/static/js/game.js"></script>
+</body>
+</html>

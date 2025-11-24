@@ -10,6 +10,7 @@
   const resetBtn = document.getElementById('resetBtn');
   const overlay = document.getElementById('overlay');
   const overlayContent = document.getElementById('overlayContent');
+  const playerNameInput = document.getElementById('playerName');
 
   const W = canvas.width, H = canvas.height;
 
@@ -62,6 +63,8 @@
     shopOpen: false,
     settings: { sfx: true },
   };
+
+  /* ------------------------------ Game classes (unchanged) ------------------------------ */
 
   class Player {
     constructor(x,y){
@@ -543,18 +546,51 @@
     ctx.stroke();
   }
 
+  /* ------------------------------ Cloud leaderboard helper functions ------------------------------ */
+
+  function saveHighScoreCloud(playerName, score) {
+    // fire-and-forget; server responds with "no-redis" if KV not configured
+    fetch("/save-score", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ name: playerName, score: score })
+    }).catch(err => {
+      // ignore network errors (offline/local)
+      console.warn("Could not save score to cloud:", err);
+    });
+  }
+
+  async function loadHighScores() {
+    try {
+      const res = await fetch("/get-highscores");
+      if(!res.ok) return "<p>Leaderboard unavailable</p>";
+      const data = await res.json();
+      if(!Array.isArray(data) || data.length === 0) return "<p>No scores yet</p>";
+      let html = "<h3>Leaderboard</h3>";
+      data.forEach((row, idx) => {
+        html += `<p>${idx + 1}. ${row.name} — Wave ${row.score}</p>`;
+      });
+      return html;
+    } catch (e) {
+      return "<p>Leaderboard error</p>";
+    }
+  }
+
   function gameOver(){
     state.running=false;
     overlay.classList.remove('hidden');
 
+    // Basic overlay content
     overlayContent.innerHTML = `
       <h2>You Died</h2>
       <p>Wave: ${state.wave}</p>
       <p>Scrap: ${state.scrap}</p>
       <button class="button" id="restart">Restart (Keep Scrap)</button>
       <button class="button" id="restartFresh">Restart Fresh</button>
+      <div id="leaderboardArea" style="margin-top:12px;"></div>
     `;
 
+    // Buttons
     document.getElementById('restart').onclick=()=> {
       overlay.classList.add('hidden');
       restart(false);
@@ -563,6 +599,23 @@
       overlay.classList.add('hidden');
       restart(true);
     };
+
+    // Save score to cloud (if available). Use player input or default "Player".
+    const playerName = (playerNameInput && playerNameInput.value && playerNameInput.value.trim().length > 0)
+      ? playerNameInput.value.trim()
+      : "Player";
+
+    try {
+      saveHighScoreCloud(playerName, state.wave);
+    } catch (e) {
+      console.warn("saveHighScoreCloud failed:", e);
+    }
+
+    // Load leaderboard asynchronously and show inside overlay
+    loadHighScores().then(html => {
+      const area = document.getElementById('leaderboardArea');
+      if(area) area.innerHTML = html;
+    });
   }
 
   function restart(fresh){

@@ -42,6 +42,19 @@ canvas {
   background:#05070f;
 }
 
+#playerBox {
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+#playerName {
+    padding: 8px;
+    width: 220px;
+    border-radius: 8px;
+    border: 1px solid #445;
+    outline: none;
+}
+
 #overlay {
   position:fixed;
   top:0; left:0;
@@ -60,9 +73,13 @@ canvas {
   background:#121825;
   padding:20px;
   border-radius:10px;
-  width:300px;
+  width:320px;
   text-align:center;
 }
+
+#overlayContent h2 { margin-bottom: 8px; color:#ffd36b; }
+#overlayContent h3 { margin-top: 12px; color:#ffda75; }
+#overlayContent p { color: #cfefff; margin:6px 0; }
 
 .button {
   background:#1f2c41;

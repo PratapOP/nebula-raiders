@@ -31,7 +31,7 @@
 
   function rand(min,max){ return Math.random()*(max-min)+min; }
   function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
-  function dist(a,b){ const dx=a.x-b.x, dy=a.y-b.y; return Math.hypot(dx,dy); }
+  function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
   function angleTo(a,b){ return Math.atan2(b.y-a.y, b.x-a.x); }
 
   const SAVE_KEY = 'nebula_save_v1';
@@ -61,10 +61,9 @@
     particles: [],
     lastShot: 0,
     shopOpen: false,
-    settings: { sfx: true },
   };
 
-  /* ------------------------------ Game classes (unchanged) ------------------------------ */
+  /* ------------------------------ GAME OBJECTS ------------------------------ */
 
   class Player {
     constructor(x,y){
@@ -309,6 +308,92 @@
     state.bullets.push(new Bullet(x,y,ang,speed,radius,owner));
   }
 
+  /* ----------------------------------------------------------------------- */
+  /* --------------------------- CLOUD FUNCTIONS ---------------------------- */
+  /* ----------------------------------------------------------------------- */
+
+  function saveHighScoreCloud(playerName, score) {
+    const url = window.location.origin + "/save-score";
+    console.log("Saving score...", playerName, score);
+
+    fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: playerName, score: score })
+    })
+    .then(r => r.json())
+    .then(r => {
+      console.log("Cloud save response:", r);
+    })
+    .catch(err => {
+      console.warn("Could not save score to cloud:", err);
+    });
+  }
+
+  async function loadHighScores() {
+    const url = window.location.origin + "/get-highscores";
+    
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return "<p>Leaderboard unavailable</p>";
+      const data = await res.json();
+      if (!Array.isArray(data) || data.length === 0) return "<p>No scores yet</p>";
+
+      let html = "<h3>Leaderboard</h3>";
+      data.forEach((row, idx) => {
+        html += `<p>${idx + 1}. ${row.name} — Wave ${row.score}</p>`;
+      });
+      return html;
+    } catch (e) {
+      return "<p>Leaderboard error</p>";
+    }
+  }
+
+  /* ----------------------------------------------------------------------- */
+  /* ------------------------------ GAME OVER ------------------------------- */
+  /* ----------------------------------------------------------------------- */
+
+  function gameOver(){
+    state.running=false;
+    overlay.classList.remove('hidden');
+
+    overlayContent.innerHTML = `
+      <h2>You Died</h2>
+      <p>Wave: ${state.wave}</p>
+      <p>Scrap: ${state.scrap}</p>
+      <button class="button" id="restart">Restart (Keep Scrap)</button>
+      <button class="button" id="restartFresh">Restart Fresh</button>
+      <div id="leaderboardArea" style="margin-top:12px;"></div>
+    `;
+
+    // restart buttons
+    document.getElementById('restart').onclick=()=> {
+      overlay.classList.add('hidden');
+      restart(false);
+    };
+    document.getElementById('restartFresh').onclick=()=> {
+      overlay.classList.add('hidden');
+      restart(true);
+    };
+
+    // SAVE SCORE TO CLOUD
+    const playerName = (playerNameInput && playerNameInput.value.trim().length > 0)
+      ? playerNameInput.value.trim()
+      : "Player";
+
+    saveHighScoreCloud(playerName, state.wave);
+
+    // LOAD LEADERBOARD
+    loadHighScores().then(html => {
+      const area = document.getElementById("leaderboardArea");
+      if (area) area.innerHTML = html;
+    });
+  }
+
+  /* ----------------------------------------------------------------------- */
+  /* ------------------------------ GAME LOOP ------------------------------- */
+  /* ----------------------------------------------------------------------- */
+
   function spawnWave(wave){
     const count = 3 + Math.floor(wave*1.6);
     for(let i=0;i<count;i++){
@@ -324,84 +409,6 @@
 
       state.enemies.push(new Enemy(ex,ey,type));
     }
-
-    for(let i=0;i<80;i++){
-      state.particles.push(new Particle(
-        rand(0,W),rand(0,H),
-        rand(-10,10),rand(-10,10),
-        rand(1.2,3.2),
-        'rgba(255,255,255,0.03)'
-      ));
-    }
-  }
-
-  function openShop(){
-    state.paused=true;
-    state.shopOpen=true;
-    overlay.classList.remove('hidden');
-
-    overlayContent.innerHTML = `
-      <h2>Interstellar Shop</h2>
-      <p>Spend scrap to upgrade!</p>
-      <button class="button" id="buy_hp">+30 Max HP (25 Scrap)</button>
-      <button class="button" id="buy_wpn">Upgrade Weapon (40 Scrap)</button>
-      <button class="button" id="buy_heal">Heal +40 HP (18 Scrap)</button>
-      <button class="button" id="cont">Continue</button>
-      <p>Scrap: <strong>${state.scrap}</strong></p>
-    `;
-
-    document.getElementById('buy_hp').onclick = () => {
-      if(state.scrap>=25){
-        state.scrap-=25;
-        state.player.maxHp+=30;
-        state.player.hp+=30;
-        updateUI();
-        openShop();
-      }
-    };
-
-    document.getElementById('buy_wpn').onclick = () => {
-      if(state.scrap>=40){
-        state.scrap-=40;
-        state.player.weaponLevel++;
-        updateUI();
-        openShop();
-      }
-    };
-
-    document.getElementById('buy_heal').onclick = () => {
-      if(state.scrap>=18){
-        state.scrap-=18;
-        state.player.hp = clamp(state.player.hp+40,0,state.player.maxHp);
-        updateUI();
-        openShop();
-      }
-    };
-
-    document.getElementById('cont').onclick = () => {
-      overlay.classList.add('hidden');
-      state.shopOpen=false;
-      state.paused=false;
-      nextWave();
-    };
-  }
-
-  shopBtn.onclick = openShop;
-
-  pauseBtn.onclick = () => {
-    state.paused=!state.paused;
-    pauseBtn.textContent = state.paused ? "Resume" : "Pause";
-  };
-
-  function nextWave(){
-    state.wave++;
-    levelEl.textContent=`Wave: ${state.wave}`;
-    spawnWave(state.wave);
-    state.player.hp = clamp(state.player.hp+10,0,state.player.maxHp);
-  }
-
-  function circleCollide(a,b){
-    return dist(a,b) < (a.radius + b.radius);
   }
 
   let lastTime = performance.now();
@@ -433,16 +440,11 @@
       if(b.owner==='player'){
         for(let j=state.enemies.length-1;j>=0;j--){
           const e=state.enemies[j];
-          if(circleCollide(b,e)){
+          if(dist(b,e) < b.radius + e.radius){
             e.hp -= 12 + state.player.weaponLevel*4;
-            spawnHit(b.x,b.y,e.radius);
 
             if(e.hp<=0){
-              const scrapAmount = 4+Math.floor(Math.random()*6)+state.wave;
-              state.scrap += scrapAmount;
-              state.particles.push(new Particle(
-                e.x,e.y,rand(-80,80),rand(-80,80),0.9,'#ffd36b'
-              ));
+              state.scrap += 4+Math.floor(Math.random()*6)+state.wave;
               state.enemies.splice(j,1);
             }
 
@@ -452,9 +454,8 @@
         }
 
       } else {
-        if(circleCollide(b,state.player)){
+        if(dist(b,state.player) < b.radius + state.player.radius){
           state.player.hp -= 8;
-          spawnHit(state.player.x,state.player.y,18);
           state.bullets.splice(i,1);
 
           if(state.player.hp<=0){
@@ -469,14 +470,8 @@
       const e=state.enemies[i];
       e.update(dt);
 
-      if(circleCollide(e,state.player)){
-        const dmg = (e.type===2)?22:8;
-        const ang = angleTo(state.player,e);
-        state.player.vx += Math.cos(ang)*80;
-        state.player.vy += Math.sin(ang)*80;
-
-        state.player.hp -= dmg*dt*0.7 + 0.8;
-
+      if(dist(e,state.player) < e.radius + state.player.radius){
+        state.player.hp -= 10*dt + 1;
         if(state.player.hp<=0){
           gameOver();
           return;
@@ -484,33 +479,12 @@
       }
     }
 
-    for(let i=state.particles.length-1;i>=0;i--){
-      const p=state.particles[i];
-      p.update(dt);
-      if(p.life<=0) state.particles.splice(i,1);
+    if(state.enemies.length===0){
+      state.wave++;
+      spawnWave(state.wave);
     }
 
-    if(state.enemies.length===0 && !state.shopOpen){
-      openShop();
-      saveStateNow();
-    }
-
-    updateUI();
-  }
-
-  function spawnHit(x,y,scale=10){
-    for(let i=0;i<12;i++){
-      state.particles.push(new Particle(
-        x,y,
-        rand(-220,220),rand(-220,220),
-        0.6+Math.random()*0.5,
-        '#ffb3b3'
-      ));
-    }
-  }
-
-  function updateUI(){
-    hpEl.textContent = `HP: ${Math.max(0,Math.round(state.player.hp))}/${state.player.maxHp}`;
+    hpEl.textContent = `HP: ${Math.round(state.player.hp)}/${state.player.maxHp}`;
     scrapEl.textContent = `Scrap: ${state.scrap}`;
     levelEl.textContent = `Wave: ${state.wave}`;
   }
@@ -546,77 +520,9 @@
     ctx.stroke();
   }
 
-  /* ------------------------------ Cloud leaderboard helper functions ------------------------------ */
-
-  function saveHighScoreCloud(playerName, score) {
-    // fire-and-forget; server responds with "no-redis" if KV not configured
-    fetch("/save-score", {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({ name: playerName, score: score })
-    }).catch(err => {
-      // ignore network errors (offline/local)
-      console.warn("Could not save score to cloud:", err);
-    });
-  }
-
-  async function loadHighScores() {
-    try {
-      const res = await fetch("/get-highscores");
-      if(!res.ok) return "<p>Leaderboard unavailable</p>";
-      const data = await res.json();
-      if(!Array.isArray(data) || data.length === 0) return "<p>No scores yet</p>";
-      let html = "<h3>Leaderboard</h3>";
-      data.forEach((row, idx) => {
-        html += `<p>${idx + 1}. ${row.name} — Wave ${row.score}</p>`;
-      });
-      return html;
-    } catch (e) {
-      return "<p>Leaderboard error</p>";
-    }
-  }
-
-  function gameOver(){
-    state.running=false;
-    overlay.classList.remove('hidden');
-
-    // Basic overlay content
-    overlayContent.innerHTML = `
-      <h2>You Died</h2>
-      <p>Wave: ${state.wave}</p>
-      <p>Scrap: ${state.scrap}</p>
-      <button class="button" id="restart">Restart (Keep Scrap)</button>
-      <button class="button" id="restartFresh">Restart Fresh</button>
-      <div id="leaderboardArea" style="margin-top:12px;"></div>
-    `;
-
-    // Buttons
-    document.getElementById('restart').onclick=()=> {
-      overlay.classList.add('hidden');
-      restart(false);
-    };
-    document.getElementById('restartFresh').onclick=()=> {
-      overlay.classList.add('hidden');
-      restart(true);
-    };
-
-    // Save score to cloud (if available). Use player input or default "Player".
-    const playerName = (playerNameInput && playerNameInput.value && playerNameInput.value.trim().length > 0)
-      ? playerNameInput.value.trim()
-      : "Player";
-
-    try {
-      saveHighScoreCloud(playerName, state.wave);
-    } catch (e) {
-      console.warn("saveHighScoreCloud failed:", e);
-    }
-
-    // Load leaderboard asynchronously and show inside overlay
-    loadHighScores().then(html => {
-      const area = document.getElementById('leaderboardArea');
-      if(area) area.innerHTML = html;
-    });
-  }
+  /* ----------------------------------------------------------------------- */
+  /* ------------------------------ RESTART --------------------------------- */
+  /* ----------------------------------------------------------------------- */
 
   function restart(fresh){
     state.enemies.length=0;
@@ -642,54 +548,13 @@
     spawnWave(state.wave);
   }
 
-  function saveStateNow(){
-    const s={
-      wave:state.wave,
-      scrap:state.scrap,
-      player:{
-        maxHp:state.player.maxHp,
-        hp:state.player.hp,
-        weapon:state.player.weapon,
-        weaponLevel:state.player.weaponLevel,
-      }
-    };
-    saveState(s);
-  }
-
-  setInterval(saveStateNow,5500);
-
-  function tryLoad(){
-    const s=loadState();
-    if(s){
-      state.wave=s.wave||1;
-      state.scrap=s.scrap||0;
-      state.player.maxHp=s.player?.maxHp||100;
-      state.player.hp=s.player?.hp||state.player.maxHp;
-      state.player.weapon=s.player?.weapon||'blaster';
-      state.player.weaponLevel=s.player?.weaponLevel||1;
-    }
-  }
-
   function bootstrap(){
     state.player = new Player(W/2,H/2);
-    tryLoad();
     spawnWave(state.wave);
 
-    lastTime=performance.now();
     requestAnimationFrame(tick);
   }
 
-  window.addEventListener('keydown', e => {
-    if(e.key==='1') state.player.weapon='blaster';
-    if(e.key==='2') state.player.weapon='shotgun';
-    if(e.key==='3') state.player.weapon='rapid';
-    if(e.key==='4') state.player.weapon='spread';
-    if(e.key==='p'){
-      state.paused=!state.paused;
-      pauseBtn.textContent = state.paused ? 'Resume' : 'Pause';
-    }
-    if(e.key==='r') restart(false);
-  });
-
   bootstrap();
+
 })();

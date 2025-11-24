@@ -9,7 +9,6 @@ except Exception as e:
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 
-# Initialize Redis connection only if REDIS_URL is provided and redis library exists.
 REDIS_URL = os.environ.get("REDIS_URL")
 if redis is not None and REDIS_URL:
     try:
@@ -33,10 +32,6 @@ def index():
 
 @app.route("/save-score", methods=["POST"])
 def save_score():
-    """
-    Save a score to Redis sorted set 'leaderboard'.
-    If Redis not available, return status indicating disabled.
-    """
     if r is None:
         return jsonify({"status": "no-redis", "message": "Leaderboard not enabled on this instance."}), 200
 
@@ -48,7 +43,6 @@ def save_score():
         score = 0
 
     try:
-        # use ZADD to add player name with score (score as score)
         r.zadd("leaderboard", {name: score})
         return jsonify({"status": "saved"}), 200
     except Exception as e:
@@ -57,13 +51,8 @@ def save_score():
 
 @app.route("/get-highscores")
 def get_highscores():
-    """
-    Return top 10 highscores from Redis 'leaderboard' sorted set.
-    If Redis not available, return empty list.
-    """
     if r is None:
         return jsonify([]), 200
-
     try:
         result = r.zrevrange("leaderboard", 0, 9, withscores=True)
         final = [{"name": name.decode() if isinstance(name, bytes) else name, "score": int(score)} for name, score in result]

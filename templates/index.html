@@ -1,39 +1,53 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="utf-8">
-    <title>Nebula Raiders</title>
-    <link rel="stylesheet" href="/static/css/style.css">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8" />
+  <title>Nebula Raiders</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Inline SVG favicon -->
+  <link rel="icon" href='data:image/svg+xml;utf8,
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+      <rect width="64" height="64" rx="12" fill="%23090b12"/>
+      <path d="M10 48 L54 32 L10 16 Z" fill="%23ffd36b"/>
+      <circle cx="46" cy="32" r="6" fill="%23ff8b70"/>
+    </svg>'>
+
+  <link rel="stylesheet" href="/static/css/style.css" />
 </head>
 <body>
 
-<div id="playerBox">
-    <input id="playerName" type="text" placeholder="Enter your name" />
-</div>
-
-<div id="ui">
-    <div id="topbar">
-        <div id="stats">
-            <span id="hp">HP: 100</span>
-            <span id="scrap">Scrap: 0</span>
-            <span id="level">Wave: 1</span>
-        </div>
-
-        <div id="controls">
-            <button id="pauseBtn">Pause</button>
-            <button id="shopBtn">Shop</button>
-            <button id="resetBtn">Reset Save</button>
-        </div>
+  <header id="header">
+    <div id="title">NEBULA RAIDERS</div>
+    <div id="top-controls">
+      <input id="playerName" type="text" placeholder="Enter your name" maxlength="16" />
+      <button id="leaderboardBtn" class="small-btn">Leaderboard</button>
+      <button id="pauseBtn" class="small-btn">Pause</button>
+      <button id="shopBtn" class="small-btn">Shop</button>
+      <button id="resetBtn" class="small-btn">Reset Save</button>
     </div>
+  </header>
 
-    <canvas id="gameCanvas" width="900" height="600"></canvas>
-</div>
+  <main id="main">
+    <aside id="hud">
+      <div class="stat"><strong id="hp">HP: 100</strong></div>
+      <div class="stat"><strong id="scrap">Scrap: 0</strong></div>
+      <div class="stat"><strong id="level">Wave: 1</strong></div>
+      <div class="stat small-note">Controls: WASD + Mouse</div>
+    </aside>
 
-<div id="overlay" class="hidden">
+    <section id="game-area">
+      <canvas id="gameCanvas" width="960" height="600"></canvas>
+    </section>
+  </main>
+
+  <div id="overlay" class="hidden" aria-hidden="true">
     <div id="overlayContent"></div>
-</div>
+  </div>
 
-<script src="/static/js/game.js"></script>
+  <footer id="footer">
+    Built with HTML5 Canvas • Deployed on Railway
+  </footer>
+
+  <script src="/static/js/game.js"></script>
 </body>
 </html>

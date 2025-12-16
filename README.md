@@ -76,6 +76,22 @@ This project was developed to demonstrate:
 
 ---
 
+## 🥃 Screenshots
+
+### 🎮 Gameplay
+![Nebula](https://github.com/user-attachments/assets/3e217c88-5d27-450e-b11b-26689ab046d8)
+
+### 👾 Menu
+<img width="599" height="465" alt="image" src="https://github.com/user-attachments/assets/71e45f19-32c9-4cb0-b6fc-02100f4aafc3" />
+
+### 🥇 Leaderboard
+<img width="501" height="384" alt="image" src="https://github.com/user-attachments/assets/9045a9a1-71f5-496e-bbb5-a76689a2c6a5" />
+
+### 🛍️ Shop
+<img width="536" height="513" alt="image" src="https://github.com/user-attachments/assets/be249285-abaa-42a1-962a-af85c8d2c8a2" />
+
+---
+
 ## 🎯 Purpose of This Project
 
 * Academic mini-project / assignment
